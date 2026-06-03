@@ -1,0 +1,21 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Database
+*.db
+
+# Environment files
+.env
+
+# React
+node_modules/
+build/
+
+# VS Code
+.vscode/
+
+# OS files
+Thumbs.db
+.DS_Store
