@@ -20,3 +20,9 @@ build/
 Thumbs.db
 .DS_Store
 *.csv
+backend/cleaned_delays.csv
+backend/steel_delays.db
+frontend/node_modules/
+venv/
+__pycache__/
+*.pyc
