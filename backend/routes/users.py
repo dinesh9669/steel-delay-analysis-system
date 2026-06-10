@@ -41,6 +41,7 @@ class StatusUpdate(BaseModel):
     active: bool
 
 
+
 # ── Helper: model → dict (no password) ───────────────────
 def to_dict(u: User) -> dict:
     return {
@@ -119,17 +120,3 @@ def update_role(
 
 
 # ── PATCH /api/users/{id}/status ─────────────────────────
-@router.patch("/{user_id}/status")
-def update_status(
-    user_id: int,
-    payload: StatusUpdate,
-    db:      Session = Depends(get_db),
-    _               = Depends(admin_only)
-):
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    user.active = payload.active
-    db.commit()
-    return to_dict(user)

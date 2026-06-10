@@ -1,27 +1,18 @@
-# backend/database.py
-# DB engine, session factory, dependency injector, and seed script
-# Run directly to initialize: python database.py
+# backend/database.py  (UPDATED)
+# Only the seed_database() function changes — 4 new users added.
+# Engine, SessionLocal, get_db, SHOP_MAP, EQPT_BY_SHOP are all identical to v1.
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models import Base, User, EquipmentMaster
 
-# ── Database URL ─────────────────────────────────────────
-# SQLite for development — change to PostgreSQL for production:
-# DATABASE_URL = "postgresql://user:password@localhost/steel_delays"
 DATABASE_URL = "sqlite:///./steel_delays.db"
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False}   # SQLite only
-)
-
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-# ── FastAPI dependency ────────────────────────────────────
 def get_db():
-    """Yields a DB session per request, closes it after."""
     db = SessionLocal()
     try:
         yield db
@@ -29,7 +20,6 @@ def get_db():
         db.close()
 
 
-# ── Seed: Shop Master ─────────────────────────────────────
 SHOP_MAP = {
     1:  "Blast Furnace",
     2:  "Steel Melt Shop",
@@ -48,66 +38,120 @@ SHOP_MAP = {
     15: "Raw Materials Handling",
 }
 
-# Equipment list per shop  [(eqpt_code, sub_eqpt_code), ...]
 EQPT_BY_SHOP = {
     1:  [("GETS",""),("F/C-1",""),("F/C-2",""),("CT-1",""),("CT-2",""),("LOCP","")],
     2:  [("CCM-1",""),("CCM-2",""),("CCM-3",""),("CCM-4",""),("CCM-5",""),
          ("CCM-6",""),("MIXER-1",""),("OT-1",""),("OT-2",""),("OT-3","")],
-    3:  [("BATTERY-1",""),("BATTERY-2",""),("BATTERY-3",""),
-         ("CPP",""),("BRC",""),("WBRC","")],
+    3:  [("BATTERY-1",""),("BATTERY-2",""),("BATTERY-3",""),("CPP",""),("BRC",""),("WBRC","")],
     4:  [("MILL","LINE-1"),("MILL","LINE-2")],
-    5:  [("CONV-A",""),("CONV-B",""),("CONV-C",""),
-         ("M/C-1",""),("M/C-2",""),("BAR MILL","")],
+    5:  [("CONV-A",""),("CONV-B",""),("CONV-C",""),("M/C-1",""),("M/C-2",""),("BAR MILL","")],
     6:  [("BILLET MIL","")],
-    7:  [("MILL","")],
-    8:  [("MILL","")],
-    9:  [("MILL","")],
-    10: [("MILL","")],
-    11: [("MILL","")],
-    12: [("MILL","")],
+    7:  [("MILL","")], 8:  [("MILL","")], 9:  [("MILL","")],
+    10: [("MILL","")], 11: [("MILL","")], 12: [("MILL","")],
     13: [("MILL","")],
     14: [("TG-1",""),("TG-2",""),("TG-3",""),("BOILER-1",""),("BOILER-2","")],
     15: [("CONV-A",""),("CONV-B",""),("WAGON TIPPLER",""),("STOCKYARD","")],
 }
 
+# ─────────────────────────────────────────────────────────
+#  ALL 5 USERS (1 existing admin + 4 new)
+# ─────────────────────────────────────────────────────────
+DEFAULT_USERS = [
+    # ── 1. System Admin (existing — unchanged) ──────────
+    {
+        "emp_no":      "ADMIN001",
+        "password":    "admin123",
+        "emp_name":    "System Admin",
+        "dept":        "IT Department",
+        "designation": "System Administrator",
+        "role":        "sys_admin",
+    },
+    # ── 2. Department Admin — Steel Melt Shop ───────────
+    # Can: Dashboard, Delay Entry, Reports, Export Excel, Delete delays
+    # Cannot: User Management (no access to /api/users/)
+    {
+        "emp_no":      "SMS001",
+        "password":    "sms@2024",
+        "emp_name":    "Rajesh Kumar",
+        "dept":        "Steel Melt Shop",
+        "designation": "Junior Manager (Operations)",
+        "role":        "dept_admin",
+    },
+    # ── 3. Department User — Blast Furnace ──────────────
+    # Can: Dashboard, Delay Entry, Reports
+    # Cannot: User Management, Export Excel, Delete delays
+    {
+        "emp_no":      "BF001",
+        "password":    "bf@2024",
+        "emp_name":    "Venkata Rao",
+        "dept":        "Blast Furnace",
+        "designation": "Shift Operator",
+        "role":        "dept_user",
+    },
+    # ── 4. PPM Admin — Production Planning ──────────────
+    # Can: Dashboard, Reports, Export Excel
+    # Cannot: Delay Entry, User Management, Delete
+    {
+        "emp_no":      "PPM001",
+        "password":    "ppm@2024",
+        "emp_name":    "Suresh Babu",
+        "dept":        "Production Planning & Management",
+        "designation": "PPM Manager",
+        "role":        "ppm_admin",
+    },
+    # ── 5. PPM User — Production Planning ───────────────
+    # Can: Dashboard, Reports only
+    # Cannot: Delay Entry, User Management, Export Excel, Delete
+    {
+        "emp_no":      "PPM002",
+        "password":    "ppm@2024",
+        "emp_name":    "Lakshmi Devi",
+        "dept":        "Production Planning & Management",
+        "designation": "PPM Analyst",
+        "role":        "ppm_user",
+    },
+]
+
 
 def seed_database():
-    """Creates all tables and inserts default data on first run."""
-    # Create all tables defined in models.py
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
-
     try:
-        # ── Seed equipment master ──────────────────────────
+        # ── Seed equipment master ──────────────────────
         if db.query(EquipmentMaster).count() == 0:
             for shop_code, shop_desc in SHOP_MAP.items():
-                eqpts = EQPT_BY_SHOP.get(shop_code, [])
-                for eqpt, sub in eqpts:
+                for eqpt, sub in EQPT_BY_SHOP.get(shop_code, []):
                     db.add(EquipmentMaster(
-                        shop_code=shop_code,
-                        shop_desc=shop_desc,
-                        eqpt_code=eqpt,
-                        sub_eqpt_code=sub,
+                        shop_code=shop_code, shop_desc=shop_desc,
+                        eqpt_code=eqpt, sub_eqpt_code=sub,
                     ))
             print("  ✓ Equipment master seeded (15 shops)")
 
-        # ── Seed default sys_admin user ────────────────────
-        if db.query(User).count() == 0:
-            from passlib.context import CryptContext
-            pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
-            db.add(User(
-                emp_no="ADMIN001",
-                password=pwd_ctx.hash("admin123"),
-                emp_name="System Admin",
-                dept="IT",
-                designation="Administrator",
-                role="sys_admin",
-                active=True,
-            ))
-            print("  ✓ Default admin created  →  emp_no: ADMIN001 | password: admin123")
+        # ── Seed all 5 users (skip existing ones) ─────
+        from passlib.context import CryptContext
+        pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+        added = 0
+        for u in DEFAULT_USERS:
+            if not db.query(User).filter(User.emp_no == u["emp_no"]).first():
+                db.add(User(
+                    emp_no      = u["emp_no"],
+                    password    = pwd_ctx.hash(u["password"]),
+                    emp_name    = u["emp_name"],
+                    dept        = u["dept"],
+                    designation = u["designation"],
+                    role        = u["role"],
+                    active      = True,
+                ))
+                added += 1
 
         db.commit()
+        print(f"  ✓ {added} user(s) seeded")
         print("✅ Database ready: steel_delays.db")
+        print()
+        print("  Credentials:")
+        for u in DEFAULT_USERS:
+            print(f"    {u['emp_no']:10s} / {u['password']:12s}  ({u['role']})")
 
     finally:
         db.close()

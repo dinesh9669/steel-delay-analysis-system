@@ -1,277 +1,250 @@
-// frontend/src/pages/UserManagement.jsx
-// Page 3 — User Management
-// Add users, modify role (dropdown), toggle active/inactive status
-// Roles are hardcoded: sys_admin | dept_user | dept_admin | ppm_user | ppm_admin
-// Status is hardcoded: Active | Inactive (toggled via button)
-
+// frontend/src/pages/UserManagement.jsx — Dark Industrial Redesign
 import { useState, useEffect } from "react";
 import { listUsers, createUser, updateRole, updateStatus } from "../utils/api";
+import { Card, PageHeader, SectionTitle, Flash, PrimaryBtn, GhostBtn, RiskBadge, Badge, DataTable } from "../components/UI";
 
-// Hardcoded roles (as per project spec)
-const ROLES = ["sys_admin", "dept_admin", "dept_user", "ppm_admin", "ppm_user"];
+const ROLES = ["sys_admin","dept_admin","dept_user","ppm_admin","ppm_user"];
 
-const ROLE_BADGE = {
-  sys_admin:  { bg: "#fef3c7", color: "#92400e" },
-  dept_admin: { bg: "#dbeafe", color: "#1e40af" },
-  dept_user:  { bg: "#dcfce7", color: "#166534" },
-  ppm_admin:  { bg: "#ede9fe", color: "#5b21b6" },
-  ppm_user:   { bg: "#f0fdf4", color: "#14532d" },
+const ROLE_COLOR = {
+  sys_admin:  "red",
+  dept_admin: "blue",
+  dept_user:  "green",
+  ppm_admin:  "orange",
+  ppm_user:   "yellow",
 };
 
-const EMPTY = { emp_no: "", password: "", emp_name: "", dept: "", designation: "", role: "dept_user" };
+const EMPTY = { emp_no:"", password:"", emp_name:"", dept:"", designation:"", role:"dept_user" };
 
 export default function UserManagement() {
-  const [users,    setUsers]   = useState([]);
-  const [showAdd,  setShowAdd] = useState(false);
-  const [form,     setForm]    = useState(EMPTY);
-  const [msg,      setMsg]     = useState(null);
-  const [saving,   setSaving]  = useState(false);
-  const [search,   setSearch]  = useState("");
+  const [users,   setUsers]   = useState([]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [form,    setForm]    = useState(EMPTY);
+  const [msg,     setMsg]     = useState(null);
+  const [saving,  setSaving]  = useState(false);
+  const [search,  setSearch]  = useState("");
 
   useEffect(() => { fetchUsers(); }, []);
 
   async function fetchUsers() {
-    try {
-      const data = await listUsers();
-      setUsers(data);
-    } catch (e) {
-      setMsg({ type: "error", text: e.message });
-    }
+    try { setUsers(await listUsers()); }
+    catch(e) { setMsg({type:"error", text:e.message}); }
   }
 
-  function onChange(e) {
-    setForm(f => ({ ...f, [e.target.name]: e.target.value }));
-  }
+  function onChange(e) { setForm(f => ({...f, [e.target.name]: e.target.value})); }
 
   async function handleAdd(e) {
-    e.preventDefault();
-    setSaving(true); setMsg(null);
+    e.preventDefault(); setSaving(true); setMsg(null);
     try {
-      await createUser({ ...form, emp_no: form.emp_no.trim().toUpperCase() });
-      setMsg({ type: "success", text: `✅ User ${form.emp_no.toUpperCase()} added successfully.` });
-      setForm(EMPTY);
-      setShowAdd(false);
-      fetchUsers();
-    } catch (err) {
-      setMsg({ type: "error", text: err.message });
-    } finally {
-      setSaving(false);
-    }
+      await createUser({...form, emp_no: form.emp_no.trim().toUpperCase()});
+      setMsg({type:"success", text:`User ${form.emp_no.toUpperCase()} created successfully.`});
+      setForm(EMPTY); setShowAdd(false); fetchUsers();
+    } catch(err) { setMsg({type:"error", text:err.message}); }
+    finally { setSaving(false); }
   }
 
   async function handleRoleChange(user, newRole) {
-    try {
-      await updateRole(user.id, newRole);
-      fetchUsers();
-    } catch (e) {
-      setMsg({ type: "error", text: e.message });
-    }
+    try { await updateRole(user.id, newRole); fetchUsers(); }
+    catch(e) { setMsg({type:"error", text:e.message}); }
   }
 
   async function handleToggle(user) {
-    try {
-      await updateStatus(user.id, !user.active);
-      fetchUsers();
-    } catch (e) {
-      setMsg({ type: "error", text: e.message });
-    }
+    try { await updateStatus(user.id, !user.active); fetchUsers(); }
+    catch(e) { setMsg({type:"error", text:e.message}); }
   }
 
   const filtered = users.filter(u =>
     u.emp_no.toLowerCase().includes(search.toLowerCase()) ||
-    u.emp_name.toLowerCase().includes(search.toLowerCase())
+    u.emp_name.toLowerCase().includes(search.toLowerCase()) ||
+    (u.dept||"").toLowerCase().includes(search.toLowerCase())
   );
 
-  return (
-    <div style={S.page}>
+  const roleStats = ROLES.map(r => ({
+    role: r,
+    count: users.filter(u => u.role === r).length,
+  }));
 
-      {/* Header */}
-      <div style={S.header}>
-        <div>
-          <h2 style={S.title}>User Management</h2>
-          <p style={S.subtitle}>Manage system users, roles and access status</p>
-        </div>
-        <button onClick={() => { setShowAdd(!showAdd); setMsg(null); }}
-                style={S.btnPrimary}>
+  return (
+    <div style={{padding:"28px", maxWidth:"1200px", margin:"0 auto", animation:"fadeIn 0.4s ease"}}>
+      <PageHeader title="User Management" subtitle="Manage system users, roles and access status">
+        <button
+          onClick={() => { setShowAdd(!showAdd); setMsg(null); }}
+          style={{
+            background: showAdd ? "transparent" : "linear-gradient(135deg,#f97316,#ea580c)",
+            color: showAdd ? "var(--text-secondary)" : "#fff",
+            border: showAdd ? "1px solid var(--border-bright)" : "none",
+            borderRadius:"8px", padding:"9px 20px",
+            fontSize:"13px", fontWeight:"700",
+            fontFamily:"var(--font-display)", letterSpacing:"0.06em",
+            cursor:"pointer", boxShadow: showAdd ? "none" : "var(--glow-orange)",
+            transition:"all 0.2s",
+          }}
+        >
           {showAdd ? "✕ Cancel" : "+ Add User"}
         </button>
+      </PageHeader>
+
+      <Flash msg={msg} />
+
+      {/* Role summary cards */}
+      <div style={{display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:"12px", marginBottom:"20px"}}>
+        {roleStats.map(r => (
+          <div key={r.role} style={{
+            background:"var(--bg-card)", border:"1px solid var(--border-dim)",
+            borderRadius:"10px", padding:"14px 16px",
+            display:"flex", flexDirection:"column", gap:"6px",
+          }}>
+            <Badge label={r.role} color={ROLE_COLOR[r.role]||"gray"} />
+            <div style={{fontFamily:"var(--font-display)", fontSize:"24px", fontWeight:"700", color:"var(--text-primary)"}}>
+              {r.count}
+            </div>
+            <div style={{fontSize:"10px", color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"0.08em"}}>users</div>
+          </div>
+        ))}
       </div>
 
-      {/* Flash message */}
-      {msg && (
-        <div style={{
-          ...S.flash,
-          background:  msg.type === "success" ? "#f0fdf4" : "#fef2f2",
-          borderColor: msg.type === "success" ? "#86efac" : "#fca5a5",
-          color:       msg.type === "success" ? "#166534" : "#dc2626",
-        }}>
-          {msg.text}
-        </div>
-      )}
-
-      {/* ── Add User Form ── */}
+      {/* Add User Form */}
       {showAdd && (
-        <div style={S.formCard}>
-          <h3 style={S.formTitle}>Add New User</h3>
+        <Card style={{marginBottom:"20px", borderColor:"var(--accent-primary)40", animation:"slideIn 0.3s ease"}}>
+          <SectionTitle accent>New User</SectionTitle>
           <form onSubmit={handleAdd}>
-            <div style={S.grid3}>
-              <div style={S.field}>
-                <label style={S.label}>Employee No *</label>
-                <input name="emp_no" value={form.emp_no} onChange={onChange}
-                       style={S.input} placeholder="e.g. EMP1001" required />
-              </div>
-              <div style={S.field}>
-                <label style={S.label}>Password *</label>
-                <input name="password" type="password" value={form.password}
-                       onChange={onChange} style={S.input} placeholder="Set password" required />
-              </div>
-              <div style={S.field}>
-                <label style={S.label}>Full Name *</label>
-                <input name="emp_name" value={form.emp_name} onChange={onChange}
-                       style={S.input} placeholder="Employee full name" required />
-              </div>
-              <div style={S.field}>
-                <label style={S.label}>Department</label>
-                <input name="dept" value={form.dept} onChange={onChange}
-                       style={S.input} placeholder="e.g. Blast Furnace" />
-              </div>
-              <div style={S.field}>
-                <label style={S.label}>Designation</label>
-                <input name="designation" value={form.designation} onChange={onChange}
-                       style={S.input} placeholder="e.g. Junior Manager" />
-              </div>
-              <div style={S.field}>
-                <label style={S.label}>Role *</label>
-                {/* Hardcoded role list */}
-                <select name="role" value={form.role} onChange={onChange} style={S.select} required>
+            <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"14px", marginBottom:"14px"}}>
+              {[
+                {name:"emp_no",      label:"Employee No *",  type:"text",     ph:"e.g. EMP1001",      req:true},
+                {name:"password",    label:"Password *",     type:"password", ph:"Set password",       req:true},
+                {name:"emp_name",    label:"Full Name *",    type:"text",     ph:"Employee full name", req:true},
+                {name:"dept",        label:"Department",     type:"text",     ph:"e.g. Blast Furnace", req:false},
+                {name:"designation", label:"Designation",    type:"text",     ph:"e.g. Jr. Manager",  req:false},
+              ].map(f => (
+                <div key={f.name} style={{display:"flex",flexDirection:"column",gap:"6px"}}>
+                  <label style={{fontSize:"10px",color:"var(--text-muted)",fontFamily:"var(--font-display)",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:"600"}}>{f.label}</label>
+                  <input name={f.name} type={f.type} value={form[f.name]} onChange={onChange}
+                    placeholder={f.ph} required={f.req}
+                    style={{background:"var(--bg-elevated)",border:"1px solid var(--border-bright)",borderRadius:"8px",padding:"10px 14px",color:"var(--text-primary)",fontSize:"14px",outline:"none"}}
+                  />
+                </div>
+              ))}
+              {/* Role select */}
+              <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
+                <label style={{fontSize:"10px",color:"var(--text-muted)",fontFamily:"var(--font-display)",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:"600"}}>Role *</label>
+                <select name="role" value={form.role} onChange={onChange} required
+                  style={{background:"var(--bg-elevated)",border:"1px solid var(--border-bright)",borderRadius:"8px",padding:"10px 14px",color:"var(--text-primary)",fontSize:"14px",cursor:"pointer"}}>
                   {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
             </div>
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "12px" }}>
-              <button type="submit"
-                      style={{ ...S.btnPrimary, opacity: saving ? 0.7 : 1 }}
-                      disabled={saving}>
-                {saving ? "Saving…" : "Save User"}
-              </button>
+            <div style={{display:"flex",justifyContent:"flex-end",gap:"10px"}}>
+              <GhostBtn type="button" onClick={()=>{setForm(EMPTY);setShowAdd(false);}}>Cancel</GhostBtn>
+              <PrimaryBtn loading={saving} type="submit">Save User</PrimaryBtn>
             </div>
           </form>
-        </div>
+        </Card>
       )}
 
-      {/* ── Search bar ── */}
-      <div style={{ marginBottom: "12px" }}>
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{ ...S.input, maxWidth: "300px", fontSize: "13px" }}
-          placeholder="🔍  Search by emp no or name…"
-        />
+      {/* Search bar */}
+      <div style={{marginBottom:"14px",display:"flex",alignItems:"center",gap:"12px"}}>
+        <div style={{position:"relative",flex:1,maxWidth:"340px"}}>
+          <span style={{position:"absolute",left:"12px",top:"50%",transform:"translateY(-50%)",color:"var(--text-muted)",fontSize:"14px"}}>🔍</span>
+          <input
+            value={search} onChange={e=>setSearch(e.target.value)}
+            placeholder="Search by emp no, name, or department…"
+            style={{width:"100%",background:"var(--bg-elevated)",border:"1px solid var(--border-bright)",borderRadius:"8px",padding:"9px 14px 9px 38px",color:"var(--text-primary)",fontSize:"13px",outline:"none"}}
+          />
+        </div>
+        <span style={{fontSize:"12px",color:"var(--text-muted)",fontFamily:"var(--font-mono)"}}>
+          {filtered.length} / {users.length} users
+        </span>
       </div>
 
-      {/* ── Users Table ── */}
-      <div style={S.tableWrap}>
-        <table style={S.table}>
-          <thead>
-            <tr>
-              {["Emp No", "Name", "Department", "Designation", "Role", "Status", "Actions"].map(h => (
-                <th key={h} style={S.th}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((u, i) => {
-              const rb = ROLE_BADGE[u.role] || { bg: "#f3f4f6", color: "#374151" };
-              return (
-                <tr key={u.id} style={{ ...S.tr, background: i % 2 === 0 ? "#fff" : "#f9fafb" }}>
-                  <td style={{ ...S.td, fontWeight: "600" }}>{u.emp_no}</td>
-                  <td style={S.td}>{u.emp_name}</td>
-                  <td style={S.td}>{u.dept}</td>
-                  <td style={S.td}>{u.designation}</td>
+      {/* Users table */}
+      <Card style={{padding:0,overflow:"hidden"}}>
+        <div style={{overflowX:"auto", borderRadius:"12px"}}>
+          <table style={{width:"100%", borderCollapse:"collapse", minWidth:"800px"}}>
+            <thead>
+              <tr style={{background:"var(--bg-elevated)"}}>
+                {["Emp No","Name","Department","Designation","Role","Status","Actions"].map(h=>(
+                  <th key={h} style={{padding:"12px 14px",textAlign:"left",fontSize:"10px",fontFamily:"var(--font-display)",fontWeight:"700",letterSpacing:"0.12em",textTransform:"uppercase",color:"var(--text-muted)",borderBottom:"1px solid var(--border-bright)",whiteSpace:"nowrap"}}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((u,i) => (
+                <tr key={u.id}
+                  style={{borderBottom:"1px solid var(--border-dim)",transition:"background 0.15s"}}
+                  onMouseEnter={e=>e.currentTarget.style.background="var(--bg-hover)"}
+                  onMouseLeave={e=>e.currentTarget.style.background="transparent"}
+                >
+                  <td style={{padding:"12px 14px"}}>
+                    <span style={{fontFamily:"var(--font-mono)",color:"var(--accent-primary)",fontSize:"13px",fontWeight:"700"}}>{u.emp_no}</span>
+                  </td>
+                  <td style={{padding:"12px 14px",fontSize:"13px",color:"var(--text-primary)",fontWeight:"600"}}>{u.emp_name}</td>
+                  <td style={{padding:"12px 14px",fontSize:"12px",color:"var(--text-secondary)"}}>{u.dept}</td>
+                  <td style={{padding:"12px 14px",fontSize:"12px",color:"var(--text-secondary)"}}>{u.designation}</td>
 
-                  {/* Role — inline dropdown (hardcoded options) */}
-                  <td style={S.td}>
+                  {/* Inline role dropdown */}
+                  <td style={{padding:"12px 14px"}}>
                     <select
                       value={u.role}
-                      onChange={e => handleRoleChange(u, e.target.value)}
+                      onChange={e=>handleRoleChange(u, e.target.value)}
                       style={{
-                        background: rb.bg, color: rb.color,
-                        border: "none", borderRadius: "20px",
-                        padding: "3px 10px", fontSize: "12px",
-                        fontWeight: "600", cursor: "pointer",
+                        background:"transparent", border:"1px solid var(--border-bright)",
+                        borderRadius:"20px", padding:"4px 10px",
+                        fontSize:"11px", fontWeight:"700",
+                        fontFamily:"var(--font-display)", letterSpacing:"0.06em",
+                        cursor:"pointer", color:"var(--text-primary)",
+                        outline:"none",
                       }}
                     >
-                      {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                      {ROLES.map(r=><option key={r} value={r}>{r}</option>)}
                     </select>
                   </td>
 
-                  {/* Status — hardcoded Active / Inactive badge */}
-                  <td style={S.td}>
+                  {/* Status badge */}
+                  <td style={{padding:"12px 14px"}}>
                     <span style={{
-                      background:   u.active ? "#dcfce7" : "#fee2e2",
-                      color:        u.active ? "#166534" : "#dc2626",
-                      borderRadius: "20px",
-                      padding:      "3px 12px",
-                      fontSize:     "12px",
-                      fontWeight:   "600",
+                      display:"inline-flex", alignItems:"center", gap:"5px",
+                      padding:"4px 10px", borderRadius:"20px", fontSize:"11px", fontWeight:"700",
+                      fontFamily:"var(--font-display)", letterSpacing:"0.06em",
+                      background: u.active ? "#22c55e20" : "#ef444420",
+                      border: `1px solid ${u.active ? "#22c55e40" : "#ef444440"}`,
+                      color: u.active ? "var(--accent-green)" : "var(--accent-red)",
                     }}>
+                      <span style={{width:"6px",height:"6px",borderRadius:"50%",background:"currentColor",display:"inline-block"}}/>
                       {u.active ? "Active" : "Inactive"}
                     </span>
                   </td>
 
-                  {/* Toggle active status */}
-                  <td style={S.td}>
+                  {/* Toggle button */}
+                  <td style={{padding:"12px 14px"}}>
                     <button
-                      onClick={() => handleToggle(u)}
+                      onClick={()=>handleToggle(u)}
                       style={{
-                        background:   u.active ? "#fee2e2" : "#dcfce7",
-                        color:        u.active ? "#dc2626" : "#166534",
-                        border:       "none", borderRadius: "6px",
-                        padding:      "5px 14px", fontSize: "12px",
-                        fontWeight:   "600", cursor: "pointer",
+                        background: u.active ? "#ef444415" : "#22c55e15",
+                        border: `1px solid ${u.active ? "#ef444430" : "#22c55e30"}`,
+                        color: u.active ? "var(--accent-red)" : "var(--accent-green)",
+                        borderRadius:"7px", padding:"5px 14px",
+                        fontSize:"11px", fontWeight:"700",
+                        fontFamily:"var(--font-display)", letterSpacing:"0.06em",
+                        cursor:"pointer", transition:"all 0.2s",
                       }}
                     >
                       {u.active ? "Deactivate" : "Activate"}
                     </button>
                   </td>
                 </tr>
-              );
-            })}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={7} style={{ textAlign: "center", padding: "36px", color: "#9ca3af", fontSize: "14px" }}>
-                  {search ? "No users match your search." : "No users found."}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <p style={{ marginTop: "10px", fontSize: "12px", color: "#9ca3af" }}>
-        {filtered.length} user{filtered.length !== 1 ? "s" : ""} shown
-      </p>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={7} style={{padding:"40px",textAlign:"center",color:"var(--text-muted)",fontStyle:"italic",fontSize:"13px"}}>
+                    {search ? "No users match your search." : "No users found."}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </div>
   );
 }
-
-const S = {
-  page:      { padding: "28px", maxWidth: "1100px", margin: "0 auto" },
-  header:    { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" },
-  title:     { margin: "0 0 4px", fontSize: "22px", fontWeight: "700", color: "#111827" },
-  subtitle:  { margin: 0, fontSize: "13px", color: "#6b7280" },
-  flash:     { padding: "12px 16px", border: "1px solid", borderRadius: "9px", fontSize: "14px", marginBottom: "16px" },
-  formCard:  { background: "#fff", borderRadius: "12px", padding: "24px", marginBottom: "20px", boxShadow: "0 1px 6px rgba(0,0,0,0.08)" },
-  formTitle: { margin: "0 0 16px", fontSize: "16px", fontWeight: "600", color: "#111827" },
-  grid3:     { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "14px" },
-  field:     { display: "flex", flexDirection: "column", gap: "5px" },
-  label:     { fontSize: "12px", fontWeight: "600", color: "#374151" },
-  input:     { padding: "8px 12px", border: "1.5px solid #d1d5db", borderRadius: "7px", fontSize: "14px", color: "#111827", outline: "none" },
-  select:    { padding: "8px 12px", border: "1.5px solid #d1d5db", borderRadius: "7px", fontSize: "14px", background: "#fff", color: "#111827", outline: "none" },
-  btnPrimary:{ background: "#0f3460", color: "#fff", border: "none", borderRadius: "8px", padding: "10px 22px", fontSize: "14px", fontWeight: "600", cursor: "pointer" },
-  tableWrap: { background: "#fff", borderRadius: "12px", boxShadow: "0 1px 6px rgba(0,0,0,0.08)", overflow: "hidden" },
-  table:     { width: "100%", borderCollapse: "collapse" },
-  th:        { background: "#f8fafc", padding: "12px 14px", textAlign: "left", fontSize: "11px", fontWeight: "700", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #e5e7eb" },
-  tr:        { borderBottom: "1px solid #f3f4f6" },
-  td:        { padding: "12px 14px", fontSize: "13px", color: "#374151" },
-};

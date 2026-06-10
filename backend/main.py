@@ -12,6 +12,7 @@ from routes.masters import router as masters_router
 from routes.delays  import router as delays_router
 from routes.users   import router as users_router
 from routes.reports import router as reports_router
+from routes.dashboard import router as dashboard_router
 
 # ── Initialize DB on startup ──────────────────────────────
 seed_database()
@@ -38,6 +39,7 @@ app.include_router(masters_router)
 app.include_router(delays_router)
 app.include_router(users_router)
 app.include_router(reports_router)
+app.include_router(dashboard_router)
 
 
 @app.get("/", tags=["root"])
